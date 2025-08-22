@@ -17,6 +17,13 @@
 #define GRAVITATIONAL_CONSTANT 6.6743E-11F
 #define ASTEROIDS_MEAN_RADIUS 4E11F
 
+#define MASS_THRESHOLD 1E20F
+
+static Vector3 getForce(OrbitalBody *body1, OrbitalBody *body2);
+static Vector3 getAcceleration(OrbitalBody *body, OrbitalSim *sim);
+static Vector3 getVelocity(OrbitalBody body, Vector3 acceleration, float timeStep);
+static Vector3 getPosition(OrbitalBody body, float timeStep);
+
 /**
  * @brief Gets a uniform random value in a range
  *
@@ -122,5 +129,61 @@ void updateOrbitalSim(OrbitalSim *sim)
     if(!sim)
         return;
 
+    sim->time += sim->timeStep;
+
+    int i,j;
+    for (i = 0; i < sim->bodyNumber; i++)
+    {
+        Vector3 acceleration = getAcceleration(&sim->bodies[i], sim);
+        sim->bodies[i].velocity = getVelocity(sim->bodies[i], acceleration, sim->timeStep);
+        sim->bodies[i].position = getPosition(sim->bodies[i], sim->timeStep);
+    }
+
+}
+
+static Vector3 getForce(OrbitalBody *body1, OrbitalBody *body2)
+{
+    Vector3 direction = Vector3Subtract(body2->position, body1->position);
+    float distance = Vector3Length(direction);
+
+    if(distance == 0)
+        return {0,0,0};
+
+    float magnitude = GRAVITATIONAL_CONSTANT * body1->mass * body2->mass / (distance * distance);
+    Vector3 force = Vector3Scale(Vector3Normalize(direction), magnitude);
+
+    return force;
+}
+
+static Vector3 getAcceleration(OrbitalBody *body, OrbitalSim *sim)
+{
+    Vector3 totalForce = {0, 0, 0};
+
+    int i;
+    for(i = 0; i < sim->bodyNumber; i++)
+    {
+        if(sim->bodies[j].mass > MASS_THRESHOLD)
+        {
+            Vector3 force = getForce(body, &sim->bodies[j]);
+            totalForce = Vector3Add(totalForce, force);
+        }
+    } 
+
+    return Vector3Scale(totalForce, 1.0F / body->mass);
+}
+
+static Vector3 getVelocity(OrbitalBody body, Vector3 acceleration, float timeStep)
+{
+    if(timeStep <= 0)
+        return body.velocity;
     
+    return Vector3Add(body.velocity, Vector3Scale(acceleration, timeStep));
+}
+
+static Vector3 getPosition(OrbitalBody body, float timeStep)
+{
+    if(timeStep <= 0)
+        return body.position;
+    
+    return Vector3Add(body.position, Vector3Scale(body.velocity, timeStep));
 }
