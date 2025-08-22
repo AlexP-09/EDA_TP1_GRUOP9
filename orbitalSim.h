@@ -8,13 +8,20 @@
 #ifndef ORBITALSIM_H
 #define ORBITALSIM_H
 
+#include <raylib.h>
+#include <raymath.h>
+
 /**
  * @brief Orbital body definition
  */
 struct OrbitalBody
 {
-    // Fill in your code here...
-
+    const char *name;       // Name of the body
+    double mass;        // Body mass [kg]
+    double radius;      // Radius [m]
+    Color color;      // Color (RGBA)
+    Vector3 position; // Position in 3 dimensions [m]
+    Vector3 velocity; // Velocity in 3 dimensions [m/s]
 
 };
 
@@ -23,8 +30,10 @@ struct OrbitalBody
  */
 struct OrbitalSim
 {
-    // Fill in your code here...
-
+    float timeStep;   // Timestep [s]
+    float time;       // Time [s]
+    int bodyNumber; // Number of bodies
+    OrbitalBody *bodies; // Array of bodies
 
 };
 
