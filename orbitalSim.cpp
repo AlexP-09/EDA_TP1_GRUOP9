@@ -78,15 +78,15 @@ OrbitalSim *constructOrbitalSim(float timeStep)
     if(timeStep <= 0)
         return NULL;
     
-    OrbitalSim *sim = (OrbitalSim *) malloc(sizeof(OrbitalSim));
+    OrbitalSim *sim = new OrbitalSim;
     if(!sim)
         return NULL;
 
-    sim->bodies = (OrbitalBody *) malloc(SOLARSYSTEM_BODYNUM * sizeof(OrbitalBody));
+    sim->bodies = new OrbitalBody[SOLARSYSTEM_BODYNUM];
     if(!sim->bodies)
     {
-        free(sim);
-        return NULL;
+       delete sim;
+       return NULL;
     }
         
     sim->timeStep = timeStep;
@@ -112,11 +112,11 @@ OrbitalSim *constructOrbitalSim(float timeStep)
  */
 void destroyOrbitalSim(OrbitalSim *sim)
 {
-    if(sim)
-        free(sim);
-
     if(sim->bodies)
         free(sim->bodies);
+
+    if (sim)
+        free(sim);
 }
 
 /**
@@ -162,9 +162,9 @@ static Vector3 getAcceleration(OrbitalBody *body, OrbitalSim *sim)
     int i;
     for(i = 0; i < sim->bodyNumber; i++)
     {
-        if(sim->bodies[j].mass > MASS_THRESHOLD)
+        if(sim->bodies[i].mass > MASS_THRESHOLD)
         {
-            Vector3 force = getForce(body, &sim->bodies[j]);
+            Vector3 force = getForce(body, &sim->bodies[i]);
             totalForce = Vector3Add(totalForce, force);
         }
     } 

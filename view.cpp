@@ -99,12 +99,14 @@ void renderView(View *view, OrbitalSim *sim)
     for(i = 0; i < sim->bodyNumber; i++)
     {
         OrbitalBody *body = &sim->bodies[i];
-        DrawSphere(body->position, body->radius, body->color);
+        DrawSphere(body->position*1E-11F, 0.005*logf(body->radius), body->color);
+        DrawPoint3D(body->position * 1E-11F, body->color);
         DrawText(TextFormat("%s", body->name), body->position.x + 0.5f, body->position.y + 0.5f, 10, WHITE);
     }
 
     DrawGrid(10, 10.0f);
     EndMode3D();
+    DrawFPS(10, 30);
 
     // Fill in your 2D drawing code here:
 
