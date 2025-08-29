@@ -10,6 +10,8 @@
 
 #include <stdlib.h>
 #include <math.h>
+#include <time.h>
+#include <stdio.h>
 
 #include "orbitalSim.h"
 #include "ephemerides.h"
@@ -17,7 +19,9 @@
 #define GRAVITATIONAL_CONSTANT 6.6743E-11F
 #define ASTEROIDS_MEAN_RADIUS 4E11F
 
+#define ASTEROIDS_NUMBER 200
 #define MASS_THRESHOLD 1E20F
+#define MIN_DISTANCE 1E8F
 
 static Vector3 getForce(OrbitalBody *body1, OrbitalBody *body2);
 static Vector3 getAcceleration(OrbitalBody *body, OrbitalSim *sim);
@@ -78,14 +82,16 @@ OrbitalSim *constructOrbitalSim(float timeStep)
     if(timeStep <= 0)
         return NULL;
     
-    OrbitalSim *sim = new OrbitalSim;
+    OrbitalSim *sim = (OrbitalSim *) malloc(sizeof(OrbitalSim));
     if(!sim)
         return NULL;
 
-    sim->bodies = new OrbitalBody[SOLARSYSTEM_BODYNUM];
-    if(!sim->bodies)
+	sim->bodyNumber = SOLARSYSTEM_BODYNUM + ASTEROIDS_NUMBER;
+
+    sim->bodies = (OrbitalBody*) malloc(sizeof(OrbitalBody) * sim->bodyNumber);
+    if (!sim->bodies)
     {
-       delete sim;
+       free(sim);
        return NULL;
     }
         
@@ -102,7 +108,11 @@ OrbitalSim *constructOrbitalSim(float timeStep)
         sim->bodies[i].position = solarSystem[i].position;
         sim->bodies[i].velocity = solarSystem[i].velocity;
     }
-    sim->bodyNumber = SOLARSYSTEM_BODYNUM;
+
+    for (; i < sim->bodyNumber; i++)
+    {
+		configureAsteroid(&sim->bodies[i], solarSystem[0].mass);
+    }
 
     return sim;
 }
@@ -112,11 +122,13 @@ OrbitalSim *constructOrbitalSim(float timeStep)
  */
 void destroyOrbitalSim(OrbitalSim *sim)
 {
+    if(!sim)
+		return;
+
     if(sim->bodies)
         free(sim->bodies);
 
-    if (sim)
-        free(sim);
+    free(sim);
 }
 
 /**
@@ -131,7 +143,7 @@ void updateOrbitalSim(OrbitalSim *sim)
 
     sim->time += sim->timeStep;
 
-    int i,j;
+    int i;
     for (i = 0; i < sim->bodyNumber; i++)
     {
         Vector3 acceleration = getAcceleration(&sim->bodies[i], sim);
@@ -141,17 +153,22 @@ void updateOrbitalSim(OrbitalSim *sim)
 
 }
 
-static Vector3 getForce(OrbitalBody *body1, OrbitalBody *body2)
+static Vector3 getForce(OrbitalBody* body1, OrbitalBody* body2)
 {
+    if(!body1 || !body2 || body1 == body2)
+		return {0, 0, 0};
+
     Vector3 direction = Vector3Subtract(body2->position, body1->position);
-    float distance = Vector3Length(direction);
 
-    if(distance == 0)
-        return {0,0,0};
+    double distance = fmaxf(Vector3Length(direction), MIN_DISTANCE);
 
-    float magnitude = GRAVITATIONAL_CONSTANT * body1->mass * body2->mass / (distance * distance);
-    Vector3 force = Vector3Scale(Vector3Normalize(direction), magnitude);
+    double magnitude = GRAVITATIONAL_CONSTANT * (double) body1->mass * (double) body2->mass / (distance * distance);
 
+    if(Vector3Length(direction = Vector3Normalize(direction)) < 0)
+        return {0, 0, 0};
+
+    Vector3 force = Vector3Scale(direction, magnitude);
+	printf("force: %e %e %e\n", force.x, force.y, force.z);
     return force;
 }
 
@@ -162,21 +179,20 @@ static Vector3 getAcceleration(OrbitalBody *body, OrbitalSim *sim)
     int i;
     for(i = 0; i < sim->bodyNumber; i++)
     {
-        if(sim->bodies[i].mass > MASS_THRESHOLD)
-        {
-            Vector3 force = getForce(body, &sim->bodies[i]);
-            totalForce = Vector3Add(totalForce, force);
-        }
-    } 
+        if(&sim->bodies[i] == body || sim->bodies[i].mass < MASS_THRESHOLD)
+			continue;
+        Vector3 force = getForce(body, &sim->bodies[i]);
+        totalForce = Vector3Add(totalForce, force);
+    }
 
     return Vector3Scale(totalForce, 1.0F / body->mass);
 }
 
 static Vector3 getVelocity(OrbitalBody body, Vector3 acceleration, float timeStep)
 {
-    if(timeStep <= 0)
+    if(timeStep <= 0 || Vector3Length(acceleration) <= 0)
         return body.velocity;
-    
+
     return Vector3Add(body.velocity, Vector3Scale(acceleration, timeStep));
 }
 

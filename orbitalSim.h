@@ -17,11 +17,11 @@
 struct OrbitalBody
 {
     const char *name;       // Name of the body
-    double mass;        // Body mass [kg]
-    double radius;      // Radius [m]
-    Color color;      // Color (RGBA)
-    Vector3 position; // Position in 3 dimensions [m]
-    Vector3 velocity; // Velocity in 3 dimensions [m/s]
+    float mass;             // Body mass [kg]
+    float radius;           // Radius [m]
+    Color color;            // Color (RGBA)
+    Vector3 position;       // Position in 3 dimensions [m]
+    Vector3 velocity;       // Velocity in 3 dimensions [m/s]
 
 };
 
