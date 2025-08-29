@@ -6,12 +6,22 @@
  */
 
 #include <time.h>
-
+#include <stdio.h>
 #include "view.h"
 
 #define WINDOW_WIDTH 1280
 #define WINDOW_HEIGHT 720
 #define SOLARSYSTEM_BODYNUM 9
+
+#define MAX_WIRES 6
+#define MAX_SPHERE_RENDER_DISTANCE 4.0f
+
+#define POSITION_SCALE 1E-11f
+#define RADIUS_SCALE(r) (0.005f * logf(r))
+
+#define VIEW_MARGIN 100
+
+static int isEntityInView(View* view, Vector3 position);
 
 /**
  * @brief Converts a timestamp (number of seconds since 1/1/2022)
@@ -49,6 +59,7 @@ View *constructView(int fps)
     SetTargetFPS(fps);
     DisableCursor();
 
+	// Set up camera
     view->camera.position = {10.0f, 10.0f, 10.0f};
     view->camera.target = {0.0f, 0.0f, 0.0f};
     view->camera.up = {0.0f, 1.0f, 0.0f};
@@ -88,6 +99,21 @@ bool isViewRendering(View *view)
  */
 void renderView(View *view, OrbitalSim *sim)
 {
+    int i;
+
+	// Set up scale factors once for every planet and the asteroids (every asteroid has the same size)
+	static bool scaleSet = false;
+    static float scaledRadius[SOLARSYSTEM_BODYNUM + 1];
+
+    if(!scaleSet)
+    {
+        for (i = 0; i < SOLARSYSTEM_BODYNUM + 1; i++)
+        {
+            scaledRadius[i] = RADIUS_SCALE(sim->bodies[i].radius);
+        }
+		scaleSet = true;
+    }
+
     UpdateCamera(&view->camera, CAMERA_FREE);
 
     BeginDrawing();
@@ -95,36 +121,64 @@ void renderView(View *view, OrbitalSim *sim)
     ClearBackground(BLACK);
     BeginMode3D(view->camera);
 
-    int i;
     for (i = 0; i < sim->bodyNumber; i++)
     {
         OrbitalBody* body = &sim->bodies[i];
-        DrawSphere(body->position * 1E-11F, 0.005f * logf(body->radius), body->color);
-        DrawPoint3D(body->position * 1E-11F, body->color);
+
+		float distToCam = Vector3Length(Vector3Subtract(body->position * POSITION_SCALE, view->camera.position));
+		int radiusIndex = i >= SOLARSYSTEM_BODYNUM ? SOLARSYSTEM_BODYNUM : i;
+        
+		// Skip entities not in view
+        if(!isEntityInView(view, Vector3Scale(body->position, POSITION_SCALE)))
+			continue;
+
+		// Draws a sphere for big bodies or asteroids close to the camera, wireframe for asteroids further away
+        if(!body->isAsteroid || distToCam < MAX_SPHERE_RENDER_DISTANCE)
+            DrawSphere(body->position * POSITION_SCALE, scaledRadius[radiusIndex], body->color);
+        else
+        {
+			// Draw wireframe for asteroids depending on distance (linear function)
+			int wiresToDraw = (int) fmaxf(MAX_WIRES - distToCam / MAX_SPHERE_RENDER_DISTANCE, 1.0f);
+            
+            DrawSphereWires(body->position * POSITION_SCALE, scaledRadius[radiusIndex], wiresToDraw, wiresToDraw, body->color);
+        }
+
+        // Always draw a point
+        DrawPoint3D(body->position * POSITION_SCALE, body->color);
     }
 
     DrawGrid(10, 10.0f);
     EndMode3D();
 
+	// 2D overlay with sim information
     DrawText("Orbital Simulation", 10, 10, 20, RAYWHITE);
     DrawFPS(10, 30);
-
-
-    for (i = 0; i < SOLARSYSTEM_BODYNUM ; i++)
+	DrawText(getISODate(sim->time), 10, 50, 20, RAYWHITE);
+    
+	// Draw names of big bodies
+    for(i = 0; i < SOLARSYSTEM_BODYNUM ; i++)
     {
         OrbitalBody* body = &sim->bodies[i];
-        Vector3 pos3D = { body->position.x*1E-11f, 
-                          body->position.y* 1E-11f + 0.005f * logf(body->radius) * 1.1f,
-                          body->position.z * 1E-11f};
-        Vector3 camDir = Vector3Normalize(Vector3Subtract(view->camera.target, view->camera.position));     
-        Vector3 bodyDir = Vector3Normalize(Vector3Subtract(pos3D, view->camera.position));                  
-        float prod = Vector3DotProduct(camDir, bodyDir);        // Veo si el objeto está en frente de la cámara o no
-
-        if (prod > 0.1f)
+        Vector3 pos3D = { body->position.x * POSITION_SCALE, 
+                          body->position.y * POSITION_SCALE + (scaledRadius[i >= SOLARSYSTEM_BODYNUM? SOLARSYSTEM_BODYNUM: i]) * 1.2f,
+                          body->position.z * POSITION_SCALE
+        };
+  
+        if (isEntityInView(view, Vector3Scale(body->position, POSITION_SCALE)))
         {
             Vector2 pos2D = GetWorldToScreen(pos3D, view->camera);
             DrawText(TextFormat("%s", body->name), (int)pos2D.x, (int)pos2D.y + 0.5f, 15, WHITE);
         }
     }
+
     EndDrawing();
+}
+
+static int isEntityInView(View* view, Vector3 position)
+{
+    Vector2 screenPos = GetWorldToScreen(position, view->camera);
+
+	// Check if the position is within the screen bounds plus a margin
+    return (screenPos.x >= -VIEW_MARGIN && screenPos.x <= WINDOW_WIDTH + VIEW_MARGIN &&
+        screenPos.y >= -VIEW_MARGIN && screenPos.y <= WINDOW_HEIGHT + VIEW_MARGIN);
 }

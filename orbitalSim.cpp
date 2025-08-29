@@ -11,7 +11,6 @@
 #include <stdlib.h>
 #include <math.h>
 #include <time.h>
-#include <stdio.h>
 
 #include "orbitalSim.h"
 #include "ephemerides.h"
@@ -19,9 +18,9 @@
 #define GRAVITATIONAL_CONSTANT 6.6743E-11F
 #define ASTEROIDS_MEAN_RADIUS 4E11F
 
-#define ASTEROIDS_NUMBER 200
+#define ASTEROIDS_NUMBER 1000
 #define MASS_THRESHOLD 1E20F
-#define MIN_DISTANCE 1E8F
+#define MIN_DISTANCE 1E7F
 
 static Vector3 getForce(OrbitalBody *body1, OrbitalBody *body2);
 static Vector3 getAcceleration(OrbitalBody *body, OrbitalSim *sim);
@@ -57,18 +56,21 @@ void configureAsteroid(OrbitalBody *body, float centerMass)
     float phi = getRandomFloat(0, 2.0F * (float)M_PI);
 
     // Surprise!
+	// Easter egg: uncomment to align all asteroids in a straight line
     // phi = 0;
 
     // https://en.wikipedia.org/wiki/Circular_orbit#Velocity
     float v = sqrtf(GRAVITATIONAL_CONSTANT * centerMass / r) * getRandomFloat(0.6F, 1.2F);
     float vy = getRandomFloat(-1E2F, 1E2F);
 
-    // Fill in with your own fields:
+	// Asteroid properties
+	body->name = "";
     body->mass = 1E12F;  // Typical asteroid weight: 1 billion tons
     body->radius = 2E3F; // Typical asteroid radius: 2km
     body->color = GRAY;
     body->position = {r * cosf(phi), 0, r * sinf(phi)};
     body->velocity = {-v * sinf(phi), vy, v * cosf(phi)};
+	body->isAsteroid = 1;
 }
 
 /**
@@ -107,6 +109,10 @@ OrbitalSim *constructOrbitalSim(float timeStep)
         sim->bodies[i].color = solarSystem[i].color;
         sim->bodies[i].position = solarSystem[i].position;
         sim->bodies[i].velocity = solarSystem[i].velocity;
+		sim->bodies[i].isAsteroid = 0;
+
+		if (i == 0 || sim->bodies[i].mass > sim->bodies[sim->maxMassBodyIndex].mass)
+			sim->maxMassBodyIndex = i;
     }
 
     for (; i < sim->bodyNumber; i++)
@@ -160,32 +166,45 @@ static Vector3 getForce(OrbitalBody* body1, OrbitalBody* body2)
 
     Vector3 direction = Vector3Subtract(body2->position, body1->position);
 
-    double distance = fmaxf(Vector3Length(direction), MIN_DISTANCE);
+	// Prevent singularity and extreme forces at close distances
+    float distance = fmaxf(Vector3Length(direction), MIN_DISTANCE);
 
-    double magnitude = GRAVITATIONAL_CONSTANT * (double) body1->mass * (double) body2->mass / (distance * distance);
+	// Only multiply by mass of body2, as body1 is handled in the acceleration calculation
+    float magnitude = GRAVITATIONAL_CONSTANT * body2->mass / (distance * distance);
 
+	// Normalize direction to get only the direction and multiply by the magnitude to get the force vector
     if(Vector3Length(direction = Vector3Normalize(direction)) < 0)
         return {0, 0, 0};
 
     Vector3 force = Vector3Scale(direction, magnitude);
-	printf("force: %e %e %e\n", force.x, force.y, force.z);
     return force;
 }
 
 static Vector3 getAcceleration(OrbitalBody *body, OrbitalSim *sim)
 {
+    if(!body || !sim || body->mass <= 0)
+		return {0, 0, 0};
+
+	// If the body is an asteroid, only consider the most massive body in the system
+    if(body->isAsteroid)
+    {
+		return getForce(body, &sim->bodies[sim->maxMassBodyIndex]);
+    }
+
     Vector3 totalForce = {0, 0, 0};
 
     int i;
     for(i = 0; i < sim->bodyNumber; i++)
     {
-        if(&sim->bodies[i] == body || sim->bodies[i].mass < MASS_THRESHOLD)
+		// Ignore self and very small bodies
+        if(&sim->bodies[i] == body || sim->bodies[i].mass <= MASS_THRESHOLD)
 			continue;
+
         Vector3 force = getForce(body, &sim->bodies[i]);
         totalForce = Vector3Add(totalForce, force);
     }
 
-    return Vector3Scale(totalForce, 1.0F / body->mass);
+    return totalForce;
 }
 
 static Vector3 getVelocity(OrbitalBody body, Vector3 acceleration, float timeStep)

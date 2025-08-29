@@ -22,7 +22,7 @@ struct OrbitalBody
     Color color;            // Color (RGBA)
     Vector3 position;       // Position in 3 dimensions [m]
     Vector3 velocity;       // Velocity in 3 dimensions [m/s]
-
+	char isAsteroid;        // Is this body an asteroid?
 };
 
 /**
@@ -30,11 +30,11 @@ struct OrbitalBody
  */
 struct OrbitalSim
 {
-    float timeStep;   // Timestep [s]
-    float time;       // Time [s]
-    int bodyNumber; // Number of bodies
-    OrbitalBody *bodies; // Array of bodies
-
+    float timeStep;         // Timestep [s]
+    float time;             // Time [s]
+    int bodyNumber;         // Number of bodies
+    OrbitalBody *bodies;    // Array of bodies
+	int maxMassBodyIndex;   // Index of the body with the highest mass
 };
 
 OrbitalSim *constructOrbitalSim(float timeStep);
