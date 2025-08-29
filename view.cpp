@@ -176,7 +176,15 @@ void renderView(View *view, OrbitalSim *sim)
 
 static int isEntityInView(View* view, Vector3 position)
 {
+	// Get the screen position of the entity
     Vector2 screenPos = GetWorldToScreen(position, view->camera);
+
+	// Check if the entity is in front of the camera
+	Vector3 toEntity = Vector3Normalize(Vector3Subtract(position, view->camera.position));
+	Vector3 forward = Vector3Normalize(Vector3Subtract(view->camera.target, view->camera.position));
+    float dotProduct = Vector3DotProduct(forward, toEntity);
+    if(dotProduct < 0.01f)
+		return 0;
 
 	// Check if the position is within the screen bounds plus a margin
     return (screenPos.x >= -VIEW_MARGIN && screenPos.x <= WINDOW_WIDTH + VIEW_MARGIN &&
