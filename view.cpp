@@ -11,6 +11,7 @@
 
 #define WINDOW_WIDTH 1280
 #define WINDOW_HEIGHT 720
+#define SOLARSYSTEM_BODYNUM 9
 
 /**
  * @brief Converts a timestamp (number of seconds since 1/1/2022)
@@ -94,23 +95,36 @@ void renderView(View *view, OrbitalSim *sim)
     ClearBackground(BLACK);
     BeginMode3D(view->camera);
 
-    // Fill in your 3D drawing code here:
     int i;
-    for(i = 0; i < sim->bodyNumber; i++)
+    for (i = 0; i < sim->bodyNumber; i++)
     {
-        OrbitalBody *body = &sim->bodies[i];
-        DrawSphere(body->position*1E-11F, 0.005*logf(body->radius), body->color);
+        OrbitalBody* body = &sim->bodies[i];
+        DrawSphere(body->position * 1E-11F, 0.005f * logf(body->radius), body->color);
         DrawPoint3D(body->position * 1E-11F, body->color);
-        DrawText(TextFormat("%s", body->name), body->position.x + 0.5f, body->position.y + 0.5f, 10, WHITE);
     }
 
     DrawGrid(10, 10.0f);
     EndMode3D();
-    DrawFPS(10, 30);
-
-    // Fill in your 2D drawing code here:
 
     DrawText("Orbital Simulation", 10, 10, 20, RAYWHITE);
+    DrawFPS(10, 30);
 
+
+    for (i = 0; i < SOLARSYSTEM_BODYNUM ; i++)
+    {
+        OrbitalBody* body = &sim->bodies[i];
+        Vector3 pos3D = { body->position.x*1E-11f, 
+                          body->position.y* 1E-11f + 0.005f * logf(body->radius) * 1.1f,
+                          body->position.z * 1E-11f};
+        Vector3 camDir = Vector3Normalize(Vector3Subtract(view->camera.target, view->camera.position));     
+        Vector3 bodyDir = Vector3Normalize(Vector3Subtract(pos3D, view->camera.position));                  
+        float prod = Vector3DotProduct(camDir, bodyDir);        // Veo si el objeto está en frente de la cámara o no
+
+        if (prod > 0.1f)
+        {
+            Vector2 pos2D = GetWorldToScreen(pos3D, view->camera);
+            DrawText(TextFormat("%s", body->name), (int)pos2D.x, (int)pos2D.y + 0.5f, 15, WHITE);
+        }
+    }
     EndDrawing();
 }
