@@ -56,6 +56,13 @@ cual cumple con el requisito planteado por la consigna.
 
 ## Bonus points
 
+Ajustes de masa: La masa de un agujero negro puede variar por múltiples órdenes de magnitud. De 
+añadir uno "pequeño" de 8 masas solares, todo el sistema solar tarda menos de un fotograma en 
+desaparecer de la vista, mientras que de alterarse la masa de Júpiter, las órbitas de los cuerpos
+que interactúan con él(todos menos los asteroides) se deforman considerablemente y pasa a formarse
+un sistema complejo de 2 cuerpos entre el planeta(cuya masa ahora se asemeja más a la de una 
+estrella) y el sol. 
+
 Easter egg: En el archivo de orbitalSim.cpp, aparece un comentario que indica que phi = 0. Cuando 
 se quita el comentario, la simulación se rompe, haciendo que los asteroides se generen en una línea
 recta y luego salgan disparados de la simulación.
