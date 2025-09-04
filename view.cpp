@@ -154,7 +154,9 @@ void renderView(View *view, OrbitalSim *sim)
     DrawText("Orbital Simulation", 10, 10, 20, RAYWHITE);
     DrawFPS(10, 30);
 	DrawText(getISODate(sim->time), 10, 50, 20, RAYWHITE);
-    
+    DrawText("Press and hold 'F' to fast forward", 10, 70, 20, RAYWHITE);
+    DrawText("Press 'P' to pause", 10, 90, 20, RAYWHITE);
+
 	// Draw names of big bodies
     for(i = 0; i < SOLARSYSTEM_BODYNUM ; i++)
     {
