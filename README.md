@@ -7,8 +7,8 @@ generación de texto para los cuerpos de la simulación. Reformateo y estilo de 
 Documentación y redacción del archivo README.
 
 Alex Petersen: Trabajo conjunto en desarrollo del modelo físico. Desarrollo de procesamiento de 
-gráficos. Integración de asteroides en la simulación. Debugging del modelo físico. Implementación 
-de sistema de pausado y acelerado de la simulación.
+gráficos dependiendo de la distancia. Integración de asteroides en la simulación. 
+Debugging del modelo físico. Implementación de sistema de pausado y avance rápido de la simulación.
 
 ## Verificación del timestep
 
