@@ -176,6 +176,13 @@ void renderView(View *view, OrbitalSim *sim)
     EndDrawing();
 }
 
+/**
+ * @brief Evaluates if an entity is in the view of the camera
+ *
+ * @param view The view
+ * @param position The position of the entity
+ * @return Is the entity in view?
+ */
 static int isEntityInView(View* view, Vector3 position)
 {
 	// Get the screen position of the entity
